@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.web.kb.mapper.KbDocumentMapper">
+
+    <resultMap type="KbDocument" id="KbDocumentResult">
+        <id     property="docId"         column="doc_id"          />
+        <result property="docName"       column="doc_name"        />
+        <result property="storePath"     column="store_path"      />
+        <result property="fileType"      column="file_type"       />
+        <result property="fileSize"      column="file_size"       />
+        <result property="status"        column="status"          />
+        <result property="failureReason" column="failure_reason"  />
+        <result property="chunkCount"    column="chunk_count"     />
+        <result property="contentChars"  column="content_chars"   />
+        <result property="delFlag"       column="del_flag"        />
+        <result property="createBy"      column="create_by"       />
+        <result property="createTime"    column="create_time"     />
+        <result property="updateBy"      column="update_by"       />
+        <result property="updateTime"    column="update_time"     />
+        <result property="remark"        column="remark"          />
+    </resultMap>
+
+    <sql id="selectKbDocumentVo">
+        select doc_id, doc_name, store_path, file_type, file_size, status, failure_reason,
+               chunk_count, content_chars, del_flag, create_by, create_time, update_by, update_time, remark
+        from kb_document
+    </sql>
+
+    <select id="selectKbDocumentList" parameterType="KbDocument" resultMap="KbDocumentResult">
+        <include refid="selectKbDocumentVo"/>
+        where del_flag = '0'
+        <if test="docName != null and docName != ''"> AND doc_name like concat('%', #{docName}, '%')</if>
+        <if test="status != null and status != ''"> AND status = #{status}</if>
+        <if test="fileType != null and fileType != ''"> AND file_type = #{fileType}</if>
+        order by create_time desc
+    </select>
+
+    <select id="selectKbDocumentById" parameterType="Long" resultMap="KbDocumentResult">
+        <include refid="selectKbDocumentVo"/>
+        where doc_id = #{docId} and del_flag = '0'
+    </select>
+
+    <select id="selectKbDocumentByStatus" parameterType="String" resultMap="KbDocumentResult">
+        <include refid="selectKbDocumentVo"/>
+        where del_flag = '0' and status = #{status}
+        order by doc_id
+    </select>
+
+    <insert id="insertKbDocument" parameterType="KbDocument" useGeneratedKeys="true" keyProperty="docId">
+        insert into kb_document(
+            <if test="docName != null and docName != ''">doc_name,</if>
+            <if test="storePath != null and storePath != ''">store_path,</if>
+            <if test="fileType != null and fileType != ''">file_type,</if>
+            <if test="fileSize != null">file_size,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="failureReason != null">failure_reason,</if>
+            <if test="chunkCount != null">chunk_count,</if>
+            <if test="contentChars != null">content_chars,</if>
+            <if test="remark != null and remark != ''">remark,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            create_time
+        )values(
+            <if test="docName != null and docName != ''">#{docName},</if>
+            <if test="storePath != null and storePath != ''">#{storePath},</if>
+            <if test="fileType != null and fileType != ''">#{fileType},</if>
+            <if test="fileSize != null">#{fileSize},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="failureReason != null">#{failureReason},</if>
+            <if test="chunkCount != null">#{chunkCount},</if>
+            <if test="contentChars != null">#{contentChars},</if>
+            <if test="remark != null and remark != ''">#{remark},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            sysdate()
+        )
+    </insert>
+
+    <update id="updateKbDocument" parameterType="KbDocument">
+        update kb_document
+        <set>
+            <if test="docName != null and docName != ''">doc_name = #{docName},</if>
+            <if test="storePath != null and storePath != ''">store_path = #{storePath},</if>
+            <if test="fileType != null and fileType != ''">file_type = #{fileType},</if>
+            <if test="fileSize != null">file_size = #{fileSize},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="failureReason != null">failure_reason = #{failureReason},</if>
+            <if test="chunkCount != null">chunk_count = #{chunkCount},</if>
+            <if test="contentChars != null">content_chars = #{contentChars},</if>
+            <if test="delFlag != null and delFlag != ''">del_flag = #{delFlag},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where doc_id = #{docId}
+    </update>
+
+    <delete id="deleteKbDocumentById" parameterType="Long">
+        update kb_document set del_flag = '2' where doc_id = #{docId}
+    </delete>
+
+    <delete id="deleteKbDocumentByIds" parameterType="Long">
+        update kb_document set del_flag = '2' where doc_id in
+        <foreach item="docId" collection="array" open="(" separator="," close=")">
+            #{docId}
+        </foreach>
+    </delete>
+
+</mapper>

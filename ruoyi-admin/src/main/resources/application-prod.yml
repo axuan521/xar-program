@@ -1,3 +1,18 @@
+# 生产环境（Linux 服务器）配置
+# 覆盖 application.yml 中的 Windows 本地默认路径；
+# 该目录同时存放知识库上传文件与向量库 kb/vector-store.json，需保证应用进程可读写
+ruoyi:
+    profile: ${RUOYI_UPLOAD_PATH:/home/ruoyi/uploadPath}
+
+# 生产环境日志级别
+# 覆盖 application.yml 里的 com.ruoyi: debug。DEBUG 下 MyBatis 会全量打印每条 SQL 及参数，
+# 经 systemd/journald 落盘后磁盘 IO 被打满，实测导致单行 UPDATE 耗时 6.7 秒、登录接口约 9 秒，
+# 前端 10 秒超时被压线卡死。生产必须用 warn。
+logging:
+    level:
+        com.ruoyi: warn
+        org.springframework: warn
+
 spring:
     ai:
         openai:
@@ -7,6 +22,10 @@ spring:
                 options:
                     model: qwen-plus
                     temperature: 0.7
+            # RAG 向量化模型（阿里云百炼，兼容模式；Spring AI 2.x 扁平写法，不再用 .options）
+            embedding:
+                model: text-embedding-v3
+                dimensions: 1024
     datasource:
         type: com.alibaba.druid.pool.DruidDataSource
         driverClassName: com.mysql.cj.jdbc.Driver
@@ -47,8 +66,11 @@ spring:
             testOnReturn: false
             webStatFilter:
                 enabled: true
+            # 生产环境关闭 druid 监控台
+            # 原为 enabled: true 且弱口令 ruoyi/123456，公网可访问 /druid/ 会暴露 SQL 与库结构；
+            # 同时监控台自身统计也带来额外开销。需要临时排查时改回 true 并设置强密码，排查完再关。
             statViewServlet:
-                enabled: true
+                enabled: false
                 allow:
                 url-pattern: /druid/*
                 login-username: ruoyi

@@ -8,6 +8,10 @@ spring:
                 options:
                     model: qwen-plus
                     temperature: 0.7
+            # RAG 向量化模型（阿里云百炼，兼容模式；Spring AI 2.x 扁平写法，不再用 .options）
+            embedding:
+                model: text-embedding-v3
+                dimensions: 1024
     datasource:
         type: com.alibaba.druid.pool.DruidDataSource
         driverClassName: com.mysql.cj.jdbc.Driver

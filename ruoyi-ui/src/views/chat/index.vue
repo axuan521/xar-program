@@ -3,11 +3,34 @@
     <header class="header">
       <span class="dot" :class="{ active: loading }" />
       AI 助手
+      <div class="header-right">
+        <el-switch
+          v-model="useKb"
+          active-text="知识库问答"
+          inactive-text="日常对话"
+        />
+        <button class="newchat" @click="newChat">新会话</button>
+      </div>
     </header>
 
     <div ref="msgBox" class="messages">
       <div v-for="(m, i) in messages" :key="i" :class="['row', m.role]">
         <div class="bubble">
+          <div v-if="m.refs && m.refs.length" class="refs">
+            <div class="refs-head" @click="m.showRefs = !m.showRefs">
+              参考文档 {{ m.refs.length }} 条 {{ m.showRefs ? "▲" : "▼" }}
+            </div>
+            <div v-show="m.showRefs" class="refs-body">
+              <div v-for="(r, j) in m.refs" :key="j" class="ref-item">
+                <span class="ref-name">〔{{ j + 1 }}〕{{ r.docName }}</span>
+                <span class="ref-score" v-if="r.score != null">
+                  相关度 {{ (r.score * 100).toFixed(0) }}%
+                </span>
+                <div class="ref-snippet">{{ r.snippet }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="m.noHit" class="nohit">知识库未检索到相关内容，以下为通用回答</div>
           {{ m.content }}<span v-if="m.streaming" class="cursor" />
         </div>
       </div>
@@ -37,6 +60,9 @@ import { getToken } from "@/utils/auth";
 
 // 与后端 concatWith(Flux.just("[DONE]")) 保持一致
 const DONE_FLAG = "[DONE]";
+// 后端特殊控制帧
+const REFS_PREFIX = "__REFS__"; // 知识库命中的引用 JSON
+const NO_HIT_FLAG = "__NOHIT__"; // 知识库未命中提示
 
 export default {
   name: "Chat",
@@ -45,11 +71,16 @@ export default {
       input: "",
       loading: false,
       abortCtl: null,
+      useKb: false,
+      convId: this.uuid(),
       messages: [
         {
           role: "ai",
           content: "你好！我是 AI 助手，有什么可以帮你？",
           streaming: false,
+          refs: [],
+          noHit: false,
+          showRefs: false,
         },
       ],
     };
@@ -58,6 +89,31 @@ export default {
     this.stop();
   },
   methods: {
+    uuid() {
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+        /[xy]/g,
+        (c) => {
+          const r = (Math.random() * 16) | 0;
+          return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+        }
+      );
+    },
+
+    newChat() {
+      this.stop();
+      this.convId = this.uuid();
+      this.messages = [
+        {
+          role: "ai",
+          content: "已开始新会话" + (this.useKb ? "（知识库问答）" : "（日常对话）") + "，请问有什么可以帮你？",
+          streaming: false,
+          refs: [],
+          noHit: false,
+          showRefs: false,
+        },
+      ];
+    },
+
     scrollBottom() {
       this.$nextTick(() => {
         const box = this.$refs.msgBox;
@@ -83,7 +139,14 @@ export default {
       this.input = "";
       this.loading = true;
 
-      const aiMsg = { role: "ai", content: "", streaming: true };
+      const aiMsg = {
+        role: "ai",
+        content: "",
+        streaming: true,
+        refs: [],
+        noHit: false,
+        showRefs: false,
+      };
       this.messages.push(aiMsg);
       this.scrollBottom();
 
@@ -98,7 +161,11 @@ export default {
         const res = await fetch(base + "/chat/stream", {
           method: "POST",
           headers: this.buildHeaders(),
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify({
+            message: text,
+            useKb: this.useKb,
+            conversationId: this.convId,
+          }),
           signal: controller.signal,
         });
 
@@ -139,6 +206,19 @@ export default {
               if (chunk.trim() === DONE_FLAG) {
                 finished = true;
                 break;
+              }
+              // 4) 特殊控制帧：引用 / 未命中提示，不计入正文
+              if (chunk.startsWith(REFS_PREFIX)) {
+                try {
+                  this.$set(aiMsg, "refs", JSON.parse(chunk.slice(REFS_PREFIX.length)));
+                } catch (e) {
+                  /* ignore */
+                }
+                continue;
+              }
+              if (chunk.trim() === NO_HIT_FLAG) {
+                this.$set(aiMsg, "noHit", true);
+                continue;
               }
               if (chunk) {
                 aiMsg.content += chunk;
@@ -210,6 +290,67 @@ export default {
 .dot.active {
   background: #f5a623;
   box-shadow: 0 0 8px #f5a623;
+}
+.header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.header-right ::v-deep .el-switch__label {
+  color: #8b93a6;
+}
+.header-right ::v-deep .el-switch__label.is-active {
+  color: #34d399;
+}
+button.newchat {
+  background: #262b38;
+  border: 1px solid #333a4a;
+  padding: 0 14px;
+  font-size: 13px;
+  height: 30px;
+}
+button.newchat:hover {
+  background: #333a4a;
+}
+.refs {
+  border: 1px solid #2f3646;
+  border-radius: 8px;
+  background: #161a22;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.refs-head {
+  padding: 6px 12px;
+  color: #7aa2ff;
+  cursor: pointer;
+  user-select: none;
+}
+.refs-body {
+  border-top: 1px solid #2f3646;
+  padding: 6px 12px 10px;
+}
+.ref-item {
+  margin-bottom: 8px;
+}
+.ref-name {
+  color: #d3dae8;
+  font-weight: 600;
+  margin-right: 10px;
+}
+.ref-score {
+  color: #565d6e;
+  font-size: 12px;
+}
+.ref-snippet {
+  color: #9aa3b5;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.nohit {
+  color: #f5a623;
+  font-size: 12px;
+  margin-bottom: 6px;
 }
 .messages {
   flex: 1;

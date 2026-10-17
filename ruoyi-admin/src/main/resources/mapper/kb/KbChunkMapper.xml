@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.web.kb.mapper.KbChunkMapper">
+
+    <resultMap type="KbChunk" id="KbChunkResult">
+        <id     property="chunkId"          column="chunk_id"          />
+        <result property="docId"            column="doc_id"            />
+        <result property="chunkIndex"       column="chunk_index"       />
+        <result property="vectorId"         column="vector_id"         />
+        <result property="embeddingStatus"  column="embedding_status"  />
+        <result property="tokenCount"       column="token_count"       />
+        <result property="content"          column="content"           />
+        <result property="createTime"       column="create_time"       />
+    </resultMap>
+
+    <select id="selectKbChunkByDocId" parameterType="Long" resultMap="KbChunkResult">
+        select chunk_id, doc_id, chunk_index, vector_id, embedding_status, token_count, content, create_time
+        from kb_chunk where doc_id = #{docId} order by chunk_index
+    </select>
+
+    <select id="selectEmbeddedChunks" parameterType="Long" resultMap="KbChunkResult">
+        select chunk_id, doc_id, chunk_index, vector_id, embedding_status, token_count, content, create_time
+        from kb_chunk where doc_id = #{docId} and embedding_status = '1' and vector_id is not null
+        order by chunk_index
+    </select>
+
+    <select id="countEmbeddedChunks" parameterType="Long" resultType="int">
+        select count(1) from kb_chunk where doc_id = #{docId} and embedding_status = '1'
+    </select>
+
+    <select id="countAllEmbeddedChunks" resultType="int">
+        select count(1) from kb_chunk c
+        inner join kb_document d on d.doc_id = c.doc_id
+        where c.embedding_status = '1' and d.status = '2' and d.del_flag = '0'
+    </select>
+
+    <insert id="batchInsertKbChunk" parameterType="java.util.List">
+        insert into kb_chunk(doc_id, chunk_index, vector_id, embedding_status, token_count, content, create_time)
+        values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.docId}, #{item.chunkIndex}, #{item.vectorId}, #{item.embeddingStatus},
+             #{item.tokenCount}, #{item.content}, sysdate())
+        </foreach>
+    </insert>
+
+    <update id="updateKbChunk" parameterType="KbChunk">
+        update kb_chunk
+        <set>
+            <if test="vectorId != null">vector_id = #{vectorId},</if>
+            <if test="embeddingStatus != null and embeddingStatus != ''">embedding_status = #{embeddingStatus},</if>
+            <if test="tokenCount != null">token_count = #{tokenCount},</if>
+            <if test="content != null">content = #{content},</if>
+        </set>
+        where chunk_id = #{chunkId}
+    </update>
+
+    <delete id="deleteKbChunkByDocId" parameterType="Long">
+        delete from kb_chunk where doc_id = #{docId}
+    </delete>
+
+</mapper>
