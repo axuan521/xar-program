@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.web.shop.mapper.ShopOrderItemMapper">
+
+    <resultMap type="ShopOrderItem" id="ShopOrderItemResult">
+        <id     property="itemId"         column="item_id"         />
+        <result property="orderId"        column="order_id"        />
+        <result property="productId"      column="product_id"      />
+        <result property="productName"    column="product_name"    />
+        <result property="productImage"   column="product_image"   />
+        <result property="unitPrice"      column="unit_price"      />
+        <result property="flavorText"     column="flavor_text"     />
+        <result property="flavorAmount"   column="flavor_amount"   />
+        <result property="quantity"       column="quantity"        />
+        <result property="subtotal"       column="subtotal"        />
+        <result property="createTime"     column="create_time"     />
+    </resultMap>
+
+    <sql id="selectShopOrderItemVo">
+        select item_id, order_id, product_id, product_name, product_image, unit_price,
+               flavor_text, flavor_amount, quantity, subtotal, create_time
+        from shop_order_item
+    </sql>
+
+    <select id="selectShopOrderItemByOrderId" parameterType="Long" resultMap="ShopOrderItemResult">
+        <include refid="selectShopOrderItemVo"/>
+        where order_id = #{orderId}
+    </select>
+
+    <insert id="batchInsertShopOrderItem" parameterType="java.util.List">
+        insert into shop_order_item(order_id, product_id, product_name, product_image, unit_price,
+                                     flavor_text, flavor_amount, quantity, subtotal, create_time)
+        values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.orderId}, #{item.productId}, #{item.productName}, #{item.productImage}, #{item.unitPrice},
+             #{item.flavorText}, #{item.flavorAmount}, #{item.quantity}, #{item.subtotal}, sysdate())
+        </foreach>
+    </insert>
+
+    <delete id="deleteShopOrderItemByOrderId" parameterType="Long">
+        delete from shop_order_item where order_id = #{orderId}
+    </delete>
+
+</mapper>

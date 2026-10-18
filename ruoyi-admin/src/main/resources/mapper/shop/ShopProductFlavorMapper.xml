@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.web.shop.mapper.ShopProductFlavorMapper">
+
+    <resultMap type="ShopProductFlavor" id="ShopProductFlavorResult">
+        <id     property="flavorId"     column="flavor_id"      />
+        <result property="productId"    column="product_id"     />
+        <result property="groupName"    column="group_name"     />
+        <result property="flavorName"   column="flavor_name"    />
+        <result property="extraPrice"   column="extra_price"    />
+        <result property="isDefault"    column="is_default"     />
+        <result property="orderNum"     column="order_num"      />
+        <result property="groupOrderNum" column="group_order_num" />
+        <result property="status"       column="status"         />
+    </resultMap>
+
+    <sql id="selectFlavorVo">
+        select flavor_id, product_id, group_name, flavor_name, extra_price,
+               is_default, order_num, group_order_num, status
+        from shop_product_flavor
+    </sql>
+
+    <select id="selectFlavorByProductId" parameterType="Long" resultMap="ShopProductFlavorResult">
+        <include refid="selectFlavorVo"/>
+        where product_id = #{productId} and status = '0'
+        order by group_order_num, order_num, flavor_id
+    </select>
+
+    <select id="selectFlavorById" parameterType="Long" resultMap="ShopProductFlavorResult">
+        <include refid="selectFlavorVo"/>
+        where flavor_id = #{flavorId}
+    </select>
+
+    <!-- 下单时按ID批量取库内真实加价，防止前端篡改金额 -->
+    <select id="selectFlavorByIds" parameterType="Long" resultMap="ShopProductFlavorResult">
+        <include refid="selectFlavorVo"/>
+        where status = '0' and flavor_id in
+        <foreach item="flavorId" collection="array" open="(" separator="," close=")">
+            #{flavorId}
+        </foreach>
+    </select>
+
+    <select id="selectFlavorByProductIds" parameterType="Long" resultMap="ShopProductFlavorResult">
+        <include refid="selectFlavorVo"/>
+        where status = '0' and product_id in
+        <foreach item="productId" collection="array" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+        order by product_id, group_order_num, order_num, flavor_id
+    </select>
+
+    <insert id="batchInsertFlavor" parameterType="java.util.List">
+        insert into shop_product_flavor(product_id, group_name, flavor_name, extra_price,
+                                        is_default, order_num, group_order_num, status)
+        values
+        <foreach item="item" index="index" collection="list" separator=",">
+            (#{item.productId}, #{item.groupName}, #{item.flavorName},
+             #{item.extraPrice}, #{item.isDefault}, #{item.orderNum},
+             #{item.groupOrderNum}, #{item.status})
+        </foreach>
+    </insert>
+
+    <update id="updateFlavor" parameterType="ShopProductFlavor">
+        update shop_product_flavor
+        <set>
+            <if test="groupName != null and groupName != ''">group_name = #{groupName},</if>
+            <if test="flavorName != null and flavorName != ''">flavor_name = #{flavorName},</if>
+            <if test="extraPrice != null">extra_price = #{extraPrice},</if>
+            <if test="isDefault != null and isDefault != ''">is_default = #{isDefault},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="groupOrderNum != null">group_order_num = #{groupOrderNum},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+        </set>
+        where flavor_id = #{flavorId}
+    </update>
+
+    <delete id="deleteFlavorByProductId" parameterType="Long">
+        delete from shop_product_flavor where product_id = #{productId}
+    </delete>
+
+    <delete id="deleteFlavorById" parameterType="Long">
+        delete from shop_product_flavor where flavor_id = #{flavorId}
+    </delete>
+
+</mapper>

@@ -116,6 +116,37 @@ referer:
   # 允许的域名列表
   allowed-domains: localhost,127.0.0.1,ruoyi.vip,www.ruoyi.vip
 
+# ------------------- 扫码点单小程序 -------------------
+wx:
+  # 小程序登录（微信公众平台 - 开发管理 - 开发设置 中获取）
+  miniapp:
+    appid:
+    secret:
+    # 本地开发无 appid 时置 true：code 直接当作 openid，可在 H5 跑通全流程。上线必须改为 false
+    mock-enabled: true
+    # 登录态有效期（天）
+    expire-days: 7
+  # 微信支付 V3（商户号需个体工商户及以上主体方可申请，个人主体无法开通）
+  # 以下任一项缺失或 disabled=true 时，支付自动降级为「到店付款」，点单功能不受影响
+  pay:
+    disabled: false
+    # 开发期模拟支付：顾客点「模拟支付」即可置为已支付，便于未办商户号时联调全流程。上线必须 false
+    mock-enabled: true
+    appid:
+    mchid:
+    # 商户 API 证书序列号（商户平台 - 账户中心 - API安全）
+    merchant-serial-number:
+    # 商户私钥 apiclient_key.pem 的服务器绝对路径
+    private-key-path:
+    # APIv3 密钥（32位），用于解密支付回调
+    api-v3-key:
+    # 支付结果回调地址，必须 HTTPS 且外网可达
+    notify-url:
+    # 微信支付公钥ID（推荐公钥模式；留空则跳过序列号校验）
+    public-key-id:
+    # 微信支付公钥或平台证书 pem 的服务器绝对路径，用于回调验签
+    public-key-path:
+
 # 防止XSS攻击
 xss:
   # 过滤开关

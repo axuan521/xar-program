@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.web.shop.mapper.ShopOrderMapper">
+
+    <resultMap type="ShopOrder" id="ShopOrderResult">
+        <id     property="orderId"         column="order_id"         />
+        <result property="orderNo"         column="order_no"         />
+        <result property="wxUserId"        column="wx_user_id"       />
+        <result property="openid"          column="openid"           />
+        <result property="totalAmount"     column="total_amount"     />
+        <result property="payType"         column="pay_type"         />
+        <result property="payStatus"       column="pay_status"       />
+        <result property="payNo"           column="pay_no"           />
+        <result property="payTime"         column="pay_time"         />
+        <result property="orderStatus"     column="order_status"     />
+        <result property="pickupDate"      column="pickup_date"      />
+        <result property="pickupNo"        column="pickup_no"        />
+        <result property="pickupCode"      column="pickup_code"      />
+        <result property="verifyTime"      column="verify_time"      />
+        <result property="verifyBy"        column="verify_by"        />
+        <result property="finishTime"      column="finish_time"      />
+        <result property="customerRemark"  column="customer_remark"  />
+        <result property="cancelReason"    column="cancel_reason"    />
+        <result property="delFlag"         column="del_flag"         />
+        <result property="createBy"        column="create_by"        />
+        <result property="createTime"      column="create_time"      />
+        <result property="updateBy"        column="update_by"        />
+        <result property="updateTime"      column="update_time"      />
+        <result property="remark"          column="remark"           />
+        <result property="nickName"        column="nick_name"        />
+        <result property="phone"           column="phone"            />
+    </resultMap>
+
+    <sql id="selectShopOrderVo">
+        select o.order_id, o.order_no, o.wx_user_id, o.openid, o.total_amount, o.pay_type,
+               o.pay_status, o.pay_no, o.pay_time, o.order_status, o.pickup_date, o.pickup_no,
+               o.pickup_code, o.verify_time, o.verify_by, o.finish_time, o.customer_remark,
+               o.cancel_reason, o.del_flag, o.create_by, o.create_time, o.update_by, o.update_time,
+               o.remark, u.nick_name, u.phone
+        from shop_order o
+        left join wx_user u on o.wx_user_id = u.wx_user_id
+    </sql>
+
+    <select id="selectShopOrderList" parameterType="ShopOrder" resultMap="ShopOrderResult">
+        <include refid="selectShopOrderVo"/>
+        <where>
+            o.del_flag = '0'
+            <if test="orderNo != null and orderNo != ''"> and o.order_no like concat('%', #{orderNo}, '%')</if>
+            <if test="orderStatus != null and orderStatus != ''"> and o.order_status = #{orderStatus}</if>
+            <if test="payType != null and payType != ''"> and o.pay_type = #{payType}</if>
+            <if test="payStatus != null and payStatus != ''"> and o.pay_status = #{payStatus}</if>
+            <if test="nickName != null and nickName != ''"> and u.nick_name like concat('%', #{nickName}, '%')</if>
+        </where>
+        order by o.create_time desc
+    </select>
+
+    <select id="selectShopOrderById" parameterType="Long" resultMap="ShopOrderResult">
+        <include refid="selectShopOrderVo"/>
+        where o.order_id = #{orderId} and o.del_flag = '0'
+    </select>
+
+    <select id="selectShopOrderByOrderNo" parameterType="String" resultMap="ShopOrderResult">
+        <include refid="selectShopOrderVo"/>
+        where o.order_no = #{orderNo} and o.del_flag = '0'
+    </select>
+
+    <select id="selectShopOrderByWxUserId" resultMap="ShopOrderResult">
+        <include refid="selectShopOrderVo"/>
+        where o.wx_user_id = #{wxUserId} and o.del_flag = '0'
+        <if test="orderStatus != null and orderStatus != ''"> and o.order_status = #{orderStatus}</if>
+        order by o.create_time desc
+    </select>
+
+    <select id="selectMaxPickupNo" parameterType="java.time.LocalDate" resultType="Integer">
+        select ifnull(max(pickup_no), 0) from shop_order where pickup_date = #{pickupDate}
+    </select>
+
+    <!-- 店员工作台：已支付的待制作/制作中/待取餐，以及到店付款尚未收款的订单 -->
+    <select id="selectPendingOrders" resultMap="ShopOrderResult">
+        <include refid="selectShopOrderVo"/>
+        where o.del_flag = '0'
+          and (
+                (o.order_status in ('1', '2', '3') and o.pay_status = '1')
+             or (o.order_status = '0' and o.pay_type = '1')
+          )
+        order by o.create_time
+    </select>
+
+    <select id="selectShopOrderByPickupCode" parameterType="String" resultMap="ShopOrderResult">
+        <include refid="selectShopOrderVo"/>
+        where o.pickup_code = #{pickupCode} and o.del_flag = '0' and o.pickup_date = curdate()
+    </select>
+
+    <insert id="insertShopOrder" parameterType="ShopOrder" useGeneratedKeys="true" keyProperty="orderId">
+        insert into shop_order(
+            order_no, wx_user_id, openid, total_amount, pay_type, pay_status,
+            order_status, pickup_date, pickup_no, pickup_code, customer_remark,
+            del_flag, create_by, create_time
+        )values(
+            #{orderNo}, #{wxUserId}, #{openid}, #{totalAmount}, #{payType}, #{payStatus},
+            #{orderStatus}, #{pickupDate}, #{pickupNo}, #{pickupCode}, #{customerRemark},
+            '0', #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateOrderStatus">
+        update shop_order set order_status = #{orderStatus}, update_time = sysdate()
+        where order_id = #{orderId}
+    </update>
+
+    <update id="updatePayStatus">
+        update shop_order
+        <set>
+            pay_status = #{payStatus},
+            <if test="payNo != null">pay_no = #{payNo},</if>
+            <if test="payTime != null">pay_time = #{payTime},</if>
+            update_time = sysdate()
+        </set>
+        where order_id = #{orderId}
+    </update>
+
+    <!-- 仅记录核销/收款人与时间，订单状态由 Service 按支付状态推进 -->
+    <update id="verifyOrder">
+        update shop_order set verify_by = #{verifyBy},
+               verify_time = sysdate(), update_time = sysdate()
+        where order_id = #{orderId}
+    </update>
+
+    <update id="cancelOrder">
+        update shop_order set order_status = '5', cancel_reason = #{cancelReason}, update_time = sysdate()
+        where order_id = #{orderId} and order_status in ('0', '1')
+    </update>
+
+    <update id="finishOrder">
+        update shop_order set order_status = '4', finish_time = sysdate(), update_time = sysdate()
+        where order_id = #{orderId}
+    </update>
+
+    <delete id="deleteShopOrderById" parameterType="Long">
+        update shop_order set del_flag = '2', update_time = sysdate() where order_id = #{orderId}
+    </delete>
+
+    <delete id="deleteShopOrderByIds" parameterType="Long">
+        update shop_order set del_flag = '2', update_time = sysdate() where order_id in
+        <foreach item="orderId" collection="array" open="(" separator="," close=")">
+            #{orderId}
+        </foreach>
+    </delete>
+
+</mapper>

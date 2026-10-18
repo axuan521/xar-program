@@ -107,3 +107,28 @@ spring:
                     max-active: 8
                     # #连接池最大阻塞等待时间（使用负值表示没有限制）
                     max-wait: -1ms
+
+# ------------------- 扫码点单小程序 -------------------
+# 安全要点：mock-enabled 必须为 false。若沿用 application.yml 里的 true，
+# 任何人提交任意 code 即可伪造 openid 登录并下单，属严重越权漏洞。
+wx:
+    miniapp:
+        appid: ${WX_MINIAPP_APPID:}
+        secret: ${WX_MINIAPP_SECRET:}
+        mock-enabled: false
+        expire-days: 7
+    # 微信支付 V3（需个体工商户及以上主体取得商户号后方可启用）
+    # 下列任一项缺失时自动降级为「到店付款」，点单流程不受影响
+    pay:
+        disabled: ${WX_PAY_DISABLED:false}
+        # 生产必须关闭模拟支付，否则可绕过真实收款
+        mock-enabled: false
+        appid: ${WX_PAY_APPID:}
+        mchid: ${WX_PAY_MCHID:}
+        merchant-serial-number: ${WX_PAY_SERIAL_NO:}
+        # 证书私钥建议放在应用目录之外，文件权限 600，仅运行用户可读
+        private-key-path: ${WX_PAY_PRIVATE_KEY_PATH:}
+        api-v3-key: ${WX_PAY_API_V3_KEY:}
+        notify-url: ${WX_PAY_NOTIFY_URL:}
+        public-key-id: ${WX_PAY_PUBLIC_KEY_ID:}
+        public-key-path: ${WX_PAY_PUBLIC_KEY_PATH:}
